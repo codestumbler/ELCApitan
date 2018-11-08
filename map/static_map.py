@@ -2,25 +2,20 @@ import time
 import matplotlib.pyplot as plt
 import math
 from obstrange import *
-from calc_obstacle_map import *
+#from calc_obstacle_map import *
 
 #print(__file__ + " start!!")
 
-def static_map(res,show_animation=False): 
+def static_map(res, drone_size, r_bubble,show_animation=False): 
     start = time.time()
     # define arena 
-    w, h = 4, 4
+    w = 4 
     n_cell = w/res
     ox, oy = [], []
 
     # define tower
-    wt, ht = 0.4, 0.4
-    r_bubble = 0.1 
+    wt  = 0.4
     wt_bubble = wt + r_bubble
-    n_cell_twr = wt_bubble/res
-
-    # define drone
-    drone_size = 0.15
 
     # borders 
     for i in range(int(n_cell)):
@@ -43,35 +38,18 @@ def static_map(res,show_animation=False):
     twr4 = [3,2,0]
 
     # Tower 1
-    range_bl, range_tr = obstrange(twr1,wt_bubble,res) 
-    for i in range(range_bl[0],range_tr[0]):
-        for j in range(range_bl[1],range_tr[1]):
-            ox.append(i)
-            oy.append(j)
-
+    t1_range_x, t1_range_y = obstrange(twr1,wt_bubble,res) 
     # Tower 2
-    range_bl, range_tr = obstrange(twr2,wt_bubble,res) 
-    for i in range(range_bl[0],range_tr[0]):
-        for j in range(range_bl[1],range_tr[1]):
-            ox.append(i)
-            oy.append(j)
-
+    t2_range_x, t2_range_y = obstrange(twr2,wt_bubble,res) 
     # Tower 3 
-    range_bl, range_tr = obstrange(twr3,wt_bubble,res) 
-    for i in range(range_bl[0],range_tr[0]):
-        for j in range(range_bl[1],range_tr[1]):
-            ox.append(i)
-            oy.append(j)
-
+    t3_range_x, t3_range_y = obstrange(twr3,wt_bubble,res) 
     # Tower 4 
-    range_bl, range_tr = obstrange(twr4,wt_bubble,res) 
-    for i in range(range_bl[0],range_tr[0]):
-        for j in range(range_bl[1],range_tr[1]):
-            ox.append(i)
-            oy.append(j)
+    t4_range_x, t4_range_y = obstrange(twr4,wt_bubble,res) 
+    
+    # Complete obstacle arrays
+    ox = ox + t1_range_x + t2_range_x + t3_range_x + t4_range_x
+    oy = oy + t1_range_y + t2_range_y + t3_range_y + t4_range_y
 
-    # Create Obstacle map 
-#    obmap, minx, miny, maxx, maxy, xwidth, ywidth = calc_obstacle_map(ox,oy,res,drone_size)
     end = time.time()
 #    print(end-start) 
     if show_animation:
