@@ -1,6 +1,7 @@
 #from planner.planner2 import *
 from map.static_map import *
-from get_start_dest import *
+from map.get_start_dest import *
+from planner.planner2 import * 
 import config_num_pm as cfg 
 import numpy as np 
 
