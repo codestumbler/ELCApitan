@@ -1,24 +1,22 @@
 #from planner.planner2 import *
 from map.static_map import *
 from get_start_dest import *
+import config_num_pm as cfg 
 import numpy as np 
 
 # load static map 
-show_animation = True 
-res = 0.1
-drone_size = 0.15
-r_bubble = 0.1 
-ox,oy = static_map(res,drone_size,r_bubble, show_animation) 
+ox,oy = static_map(cfg) 
 
 # create empty map of same size 
 x = range(int(min(ox)),int(max(ox)))
 y = range(int(min(oy)),int(max(oy)))
 
 # get start position and destination
-Ndrones    = 3
-Ndimensions= 2
+Ndrones     = cfg.pm['N_drones']
+Ndimensions = cfg.pm['N_dim']
+res         = cfg.pm['resolution']
 
-start_dest = np.empty((0,Ndimensions*2))
+start_dest  = np.empty((0,Ndimensions*2))
 
 for drone in range(Ndrones):
     sx,sy  = get_start_dest(ox,oy) 
@@ -31,8 +29,9 @@ for drone in range(Ndrones):
     start_dest       = np.vstack((start_dest,start_dest_drone))
 
 # compute trajectories 
-
-pos = start_dest[:,0:2]
+drone_size  = cfg.pm['drone_size']
+r_bubble    = cfg.pm['r_safety']  
+pos         = start_dest[:,0:2]
 
 t = 0
 
@@ -50,9 +49,14 @@ while 1:
             ox.extend(range_sox) 
             oy.extend(range_soy) 
 
+    plt.plot(ox, oy, ".k")
+    plt.grid(True)
+    plt.axis("equal")
+    plt.show()
+
         # optimal path planner
-        traj = planner2(pos, obstmap)
-        xc,yc = traj[0][0]
+#        traj = planner2(pos, obstmap)
+#        xc,yc = traj[0][0]
 
         #update position 
         

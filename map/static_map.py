@@ -1,21 +1,22 @@
 import time
 import matplotlib.pyplot as plt
 import math
-from obstrange import *
+from map.obstrange import *
 #from calc_obstacle_map import *
 
-#print(__file__ + " start!!")
-
-def static_map(res, drone_size, r_bubble,show_animation=False): 
-    start = time.time()
+def static_map(cfg): 
+    start       = time.time()
     # define arena 
-    w = 4 
-    n_cell = w/res
-    ox, oy = [], []
+    w           = cfg.pm['arena_width']
+    res         = cfg.pm['resolution']
+
+    n_cell      = w/res
+    ox, oy      = [], []
 
     # define tower
-    wt  = 0.4
-    wt_bubble = wt + r_bubble
+    wt          = cfg.pm['tower_size']
+    r_bubble    = cfg.pm['r_safety']
+    wt_bubble   = wt + r_bubble
 
     # borders 
     for i in range(int(n_cell)):
@@ -32,10 +33,10 @@ def static_map(res, drone_size, r_bubble,show_animation=False):
         oy.append(i)
 
     # towers 
-    twr1 = [2,2.8,0]
-    twr2 = [1.5,1,0]
-    twr3 = [3.15,0.7,0]
-    twr4 = [3,2,0]
+    twr1 = cfg.pm['tower1']
+    twr2 = cfg.pm['tower2']
+    twr3 = cfg.pm['tower3']
+    twr4 = cfg.pm['tower4']
 
     # Tower 1
     t1_range_x, t1_range_y = obstrange(twr1,wt_bubble,res) 
@@ -52,7 +53,7 @@ def static_map(res, drone_size, r_bubble,show_animation=False):
 
     end = time.time()
 #    print(end-start) 
-    if show_animation:
+    if cfg.pm['show_animation']:
         plt.plot(ox, oy, ".k")
         plt.grid(True)
         plt.axis("equal")
