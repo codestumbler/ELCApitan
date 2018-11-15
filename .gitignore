@@ -120,4 +120,5 @@ dmypy.json
 *~
 
 # config file 
-config* 
+config_num_pm.py
+ 
