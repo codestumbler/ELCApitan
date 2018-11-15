@@ -118,3 +118,6 @@ dmypy.json
 *.swo
 *.un
 *~
+
+# config file 
+config* 
