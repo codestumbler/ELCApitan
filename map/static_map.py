@@ -53,7 +53,7 @@ def static_map(cfg):
 
     end = time.time()
 #    print(end-start) 
-    if cfg.pm['show_animation']:
+    if cfg.pm['show_static_map']:
         plt.plot(ox, oy, ".k")
         plt.grid(True)
         plt.axis("equal")
