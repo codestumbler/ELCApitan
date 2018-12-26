@@ -1,51 +1,175 @@
-#from a_star_hz.py import *
-from a_star2 import *
-from dyn_obst import *
-import sys
-sys.path.insert(0,'../map/')
+import math 
+import matplotlib.pyplot as plt 
+class Node:
 
-from static_map import *
+    def __init__(self, x, y, cost, pind):
+        self.x = x
+        self.y = y
+        self.cost = cost
+        self.pind = pind
 
-# start and goal position
-grid_size = 0.1  # [m]
-gx = 3.5/grid_size  # [m]
-gy = 0.5/grid_size  # [m]
-robot_size = 0.15/grid_size  # [m]
-r_bubble = 0.1/grid_size
-xwidth = 4/grid_size
-ywidth = 4/grid_size
+    def __str__(self):
+        return str(self.x) + "," + str(self.y) + "," + str(self.cost) + "," + str(self.pind)
 
-def planner2(xcurr_self=2, ycurr_self=2, x1=0.3, y1=0.3, x2=0.3, y2=0.3):
-    ox,oy = static_map(grid_size)
-    xcurr_self = xcurr_self/grid_size
-    ycurr_self = ycurr_self/grid_size
-  # create safety bubble around drones
-    x1s, y1s =(x1 - r_bubble)/grid_size,(y1 - r_bubble)/grid_size
-    x2s, y2s =(x2 + r_bubble)/grid_size,(y2 + r_bubble)/grid_size
 
-    #Create Range of other drones
-    drone1_bl, drone1_tr = obstrange([x1s,y1s],robot_size,grid_size)
-    drone2_bl, drone2_tr = obstrange([x2s,y2s],robot_size,grid_size)
+def calc_final_path(ngoal, closedset, reso):
+    # generate final course
+    rx, ry = [ngoal.x * reso], [ngoal.y * reso]
+    pind = ngoal.pind
+    while pind != -1:
+        n = closedset[pind]
+        rx.append(n.x * reso)
+        ry.append(n.y * reso)
+        pind = n.pind
+
+    return rx, ry
+
+
+def a_star_planning(sx, sy, gx, gy, ox, oy, cfg):
+
+    """
+    gx: goal x position [m]
+    gx: goal x position [m]
+    ox: x position list of Obstacles [m]
+    oy: y position list of Obstacles [m]
+    cfg: config dict with parameters
+    """
+    reso = cfg.pm['resolution']
+    rr   = cfg.pm['drone_size'] + cfg.pm['r_safety'] 
     
-    # create moving obstacle ranges
-    x1range, y1range, obmap_dyn1 = dyn_obst(drone1_bl,drone1_tr,xwidth,ywidth)
-    x2range, y2range, obmap_dyn2 = dyn_obst(drone2_bl,drone2_tr,xwidth,ywidth)
+    nstart = Node(round(sx / reso), round(sy / reso), 0.0, -1)
+    ngoal = Node(round(gx / reso), round(gy / reso), 0.0, -1)
+    ox = [iox / reso for iox in ox]
+    oy = [ioy / reso for ioy in oy]
 
-    # Append position of other drones 
-    ox.extend(x1range)
-    ox.extend(x2range)
-    oy.extend(y1range)
-    oy.extend(y2range) 
+    obmap, minx, miny, maxx, maxy, xw, yw = calc_obstacle_map(ox, oy, reso, rr)
 
-    if show_animation:
-        plt.plot(ox, oy, ".k")
-        plt.plot(xcurr_self, ycurr_self, "xr")
-        plt.plot(gx, gy, "xb")
-        plt.grid(True)
+    motion = get_motion_model()
 
-    rx,ry = a_star_planning(xcurr_self,xcurr_self, gx, gy, ox, oy, grid_size, robot_size) 
+    openset, closedset = dict(), dict()
+    openset[calc_index(nstart, xw, minx, miny)] = nstart
 
-    if show_animation:
-        plt.plot(rx, ry, "-r")
-        plt.show()
-    return rx[0],ry[0] 
+    while 1:
+        c_id = min(
+            openset, key=lambda o: openset[o].cost + calc_heuristic(ngoal, openset[o]))
+        current = openset[c_id]
+
+        # show graph
+        if cfg.pm['show_animation']:
+            plt.plot(current.x * reso, current.y * reso, "xc")
+            if len(closedset.keys()) % 10 == 0:
+                plt.pause(0.001)
+
+        if current.x == ngoal.x and current.y == ngoal.y:
+            print("Find goal")
+            ngoal.pind = current.pind
+            ngoal.cost = current.cost
+            break
+
+        # Remove the item from the open set
+        del openset[c_id]
+        # Add it to the closed set
+        closedset[c_id] = current
+
+        # expand search grid based on motion model
+        for i in range(len(motion)):
+            node = Node(current.x + motion[i][0],
+                        current.y + motion[i][1],
+                        current.cost + motion[i][2], c_id)
+            n_id = calc_index(node, xw, minx, miny)
+
+            if n_id in closedset:
+                continue
+
+            if not verify_node(node, obmap, minx, miny, maxx, maxy):
+                continue
+
+            if n_id not in openset:
+                openset[n_id] = node  # Discover a new node
+
+            tcost = current.cost + calc_heuristic(current, node)
+
+            if tcost >= node.cost:
+                continue  # this is not a better path
+
+            node.cost = tcost
+            openset[n_id] = node  # This path is the best unitl now. record it!
+
+    rx, ry = calc_final_path(ngoal, closedset, reso)
+
+    return rx, ry
+
+
+def calc_heuristic(n1, n2):
+    w = 1.0  # weight of heuristic
+    d = w * math.sqrt((n1.x - n2.x)**2 + (n1.y - n2.y)**2)
+    return d
+
+
+def verify_node(node, obmap, minx, miny, maxx, maxy):
+
+    if node.x < minx:
+        return False
+    elif node.y < miny:
+        return False
+    elif node.x >= maxx:
+        return False
+    elif node.y >= maxy:
+        return False
+
+    if obmap[node.x][node.y]:
+        return False
+
+    return True
+
+
+def calc_obstacle_map(ox, oy, reso, vr):
+
+    minx = round(min(ox))
+    miny = round(min(oy))
+    maxx = round(max(ox))
+    maxy = round(max(oy))
+    #  print("minx:", minx)
+    #  print("miny:", miny)
+    #  print("maxx:", maxx)
+    #  print("maxy:", maxy)
+
+    xwidth = int(round(maxx - minx))
+    ywidth = int(round(maxy - miny))
+    #  print("xwidth:", xwidth)
+    #  print("ywidth:", ywidth)
+
+    # obstacle map generation
+    obmap = [[False for i in range(xwidth)] for i in range(ywidth)]
+    for ix in range(xwidth):
+        x = ix + minx
+        for iy in range(ywidth):
+            y = iy + miny
+            #  print(x, y)
+            for iox, ioy in zip(ox, oy):
+                d = math.sqrt((iox - x)**2 + (ioy - y)**2)
+                if d <= vr / reso:
+                    obmap[ix][iy] = True
+                    break
+
+    return obmap, minx, miny, maxx, maxy, xwidth, ywidth
+
+
+def calc_index(node, xwidth, xmin, ymin):
+    return (node.y - ymin) * xwidth + (node.x - xmin)
+
+
+def get_motion_model():
+    # dx, dy, cost
+    motion = [[1, 0, 1],
+              [0, 1, 1],
+              [-1, 0, 1],
+              [0, -1, 1],
+              [-1, -1, math.sqrt(2)],
+              [-1, 1, math.sqrt(2)],
+              [1, -1, math.sqrt(2)],
+              [1, 1, math.sqrt(2)]]
+
+    return motion
+
+
